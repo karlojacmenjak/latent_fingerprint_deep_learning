@@ -3,11 +3,15 @@ import numpy as np
 import os
 import cv2
 import albumentations as A
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers, models
 from tqdm import tqdm
 from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.callbacks import EarlyStopping
+
+# os.environ["OMP_NUM_THREADS"] = "2"  # Adjust based on your CPU core count
+# tf.config.threading.set_inter_op_parallelism_threads(2)
+# tf.config.threading.set_intra_op_parallelism_threads(2)
 
 # Ensure that TensorFlow only uses as much GPU memory as needed
 gpus = tf.config.list_physical_devices('GPU')
@@ -33,7 +37,7 @@ aug = A.Compose([
     A.HueSaturationValue(p=0.3),  # Random hue/saturation adjustment
 ])
 
-def load_images(base_dir):
+def load_images(base_dir, subset_limit=None):
     image_paths = []
     labels = []
     
@@ -47,6 +51,11 @@ def load_images(base_dir):
                     img_path = os.path.join(folder_path, img_name)
                     image_paths.append(img_path)
                     labels.append(label_folder)  # Use folder name as label
+    
+    # Limit the dataset if subset_limit is specified
+    if subset_limit:
+        image_paths = image_paths[:subset_limit]
+        labels = labels[:subset_limit]
     
     print(f"Total images loaded: {len(image_paths)}")
     return image_paths, labels
@@ -89,16 +98,26 @@ def create_model():
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
 
+# Limit the dataset size for faster experiments
+SUBSET_LIMIT = 1000  # Use only 1000 images
+
 # Load and preprocess images
-image_paths, labels = load_images(BASE_DIR)
-images_gen = preprocess_images(image_paths)
+image_paths, labels = load_images(BASE_DIR, subset_limit=SUBSET_LIMIT)
 
 # Encode labels to binary format (for binary classification)
 le = LabelEncoder()
 labels = le.fit_transform(labels)
 
+# Preprocess the images and store the results in lists
+images_list = []
+for image_batch in preprocess_images(image_paths):
+    images_list.extend(image_batch)
+
+# Ensure images_list and labels are the same length
+assert len(images_list) == len(labels), f"Mismatch between number of images ({len(images_list)}) and labels ({len(labels)})"
+
 # Split into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(list(images_gen), labels, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(images_list, labels, test_size=0.2, random_state=42)
 
 # Normalize images to [0, 1] range
 X_train = np.array(X_train) / 255.0
@@ -116,14 +135,17 @@ class ProgressBar(tf.keras.callbacks.Callback):
         print(f"Epoch {epoch + 1} finished: Accuracy: {logs['accuracy']:.4f}, Loss: {logs['loss']:.4f}")
 
 # Train the model with the use of a progress bar and handle large batch processing
+progress_bar = ProgressBar()
+early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+
 print("Training the model...")
 model.fit(
     X_train, y_train, 
     validation_data=(X_test, y_test), 
     epochs=10, 
-    batch_size=32, 
-    verbose=0, 
-    callbacks=[ProgressBar()]
+    batch_size=16, 
+    verbose=2, 
+    callbacks=[progress_bar, early_stopping]
 )
 
 # Evaluate the model
