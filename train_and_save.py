@@ -5,8 +5,8 @@ import cv2
 import albumentations as A
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras import layers, models # type: ignore
+from tensorflow.keras.callbacks import EarlyStopping # type: ignore
 from tqdm import tqdm
 import logging
 
@@ -37,8 +37,10 @@ def load_images(base_dir, subset_limit=None):
         if os.path.isdir(folder_path):
             for img in os.listdir(folder_path):
                 if img.endswith('.png'):
+                    # Extract the identifier before "_" in the filename
+                    identifier = img.split('_')[0]
                     image_paths.append(os.path.join(folder_path, img))
-                    labels.append(folder)
+                    labels.append(identifier)
     if subset_limit:
         image_paths, labels = image_paths[:subset_limit], labels[:subset_limit]
     logging.info(f"Loaded {len(image_paths)} images.")
@@ -53,7 +55,7 @@ def create_model():
         layers.MaxPooling2D((2, 2)),
         layers.Flatten(),
         layers.Dense(128, activation='relu'),
-        layers.Dense(1, activation='sigmoid')
+        layers.Dense(1, activation='sigmoid')  # Binary classification
     ])
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
