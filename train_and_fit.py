@@ -148,6 +148,12 @@ model.fit(
     callbacks=[progress_bar, early_stopping]
 )
 
+# Save the model
+MODEL_SAVE_PATH = "fingerprint_model.h5"
+model.save(MODEL_SAVE_PATH)
+print(f"Model saved to {MODEL_SAVE_PATH}")
+
+
 # Evaluate the model
 test_loss, test_acc = model.evaluate(X_test, y_test, verbose=1)
 print(f"Test Accuracy: {test_acc:.4f}")
