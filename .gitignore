@@ -1,3 +1,4 @@
 datasets/*
 fingerprints/*
 *.h5
+*.pyc
