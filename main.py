@@ -17,14 +17,14 @@ if gpus:
 # Paths and settings
 MODEL_PATH = "fingerprint_model.h5"
 BASE_DIR = "./fingerprints/images/latent/png"
-SUBSET_LIMIT = 1000
+SUBSET_LIMIT = 2000
 PREDICT_COUNT = 5
 
 if __name__ == "__main__":
     logging.info("Starting training...")
-    train_and_save_model(BASE_DIR, MODEL_PATH, subset_limit=SUBSET_LIMIT)
+    classes = train_and_save_model(BASE_DIR, MODEL_PATH, subset_limit=SUBSET_LIMIT)
 
     logging.info("Starting prediction...")
-    results = predict_multiple(BASE_DIR, MODEL_PATH, n=PREDICT_COUNT)
+    results = predict_multiple(BASE_DIR, MODEL_PATH, n=PREDICT_COUNT, class_names=classes)
     for result in results:
         logging.info(f"Summary -> ID: {result['identifier']}, Predicted Class: {result['predicted_class']}, Confidence: {result['confidence']:.2f}")
