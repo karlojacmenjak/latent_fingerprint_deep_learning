@@ -2,3 +2,5 @@ datasets/*
 fingerprints/*
 *.h5
 *.pyc
+validation_data/*
+train_data/*
