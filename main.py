@@ -1,4 +1,5 @@
 import tensorflow as tf
+from constants import BASE_DIR, MODEL_PATH, PREDICT_COUNT, SUBSET_LIMIT
 from train_and_save import train_and_save_model
 from predict_from_model import predict_multiple
 import logging
@@ -15,10 +16,7 @@ if gpus:
         logging.error(f"Failed to set GPU memory growth: {e}")
 
 # Paths and settings
-MODEL_PATH = "fingerprint_model.h5"
-BASE_DIR = "./fingerprints/images/latent/png"
-SUBSET_LIMIT = 2000
-PREDICT_COUNT = 5
+
 
 if __name__ == "__main__":
     logging.info("Starting training...")
