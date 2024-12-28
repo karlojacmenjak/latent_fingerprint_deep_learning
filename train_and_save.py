@@ -1,95 +1,103 @@
 import tensorflow as tf
-import numpy as np
 import os
-import json
+import logging
 from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-import logging
+
+from constants import TRAIN_DIR, VALIDATION_DIR
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-def load_images_with_labels(base_dir, subset_limit=None):
-    image_paths = []
-    labels = []
-    for folder in os.listdir(base_dir):
-        folder_path = os.path.join(base_dir, folder)
-        if os.path.isdir(folder_path):
-            for img in os.listdir(folder_path):
-                if img.endswith('.png'):
-                    image_paths.append(os.path.join(folder_path, img))
-                    labels.append(folder)  # Folder name as label (class ID)
-    if subset_limit:
-        image_paths, labels = image_paths[:subset_limit], labels[:subset_limit]
-    logging.info(f"Loaded {len(image_paths)} images.")
-    return image_paths, labels
-
-def preprocess_images(image_paths, labels, image_size=(224, 224)):
-    """Preprocess images and create TensorFlow Dataset."""
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels))
-
-    def preprocess(path, label):
-        img = tf.io.read_file(path)
-        img = tf.image.decode_png(img, channels=3)
-        img = tf.image.resize(img, image_size) / 255.0  # Normalize to [0, 1]
-        return img, label
-
-    dataset = dataset.map(preprocess)
-    return dataset
 
 def create_model(num_classes):
     """Create a Convolutional Neural Network for multiclass classification."""
     model = models.Sequential([
-        layers.InputLayer(input_shape=(224, 224, 3)),
-        layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
+        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)),
         layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+        layers.Conv2D(64, (3, 3), activation='relu'),
+        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(128, (3, 3), activation='relu'),
         layers.MaxPooling2D((2, 2)),
         layers.Flatten(),
-        layers.Dense(128, activation='relu'),
-        layers.Dropout(0.5),  # Regularization
-        layers.Dense(num_classes, activation='softmax')  # Multiclass classification
+        layers.Dense(512, activation='relu'),
+        layers.Dropout(0.5),  # Adding dropout for regularization
+        layers.Dense(200, activation='softmax')  # 200 classes for output
     ])
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),  # Adjust learning rate
+        loss='categorical_crossentropy',  # Loss function for multi-class classification
+        metrics=['accuracy']  # Accuracy metric
+    )
     return model
-
 
 def train_and_save_model(base_dir, model_path, subset_limit=None):
     """Train the model and save it to the specified path."""
-    logging.info("Loading and preprocessing images...")
-    dataset = tf.keras.preprocessing.image_dataset_from_directory(
-        base_dir,
-        image_size=(224, 224),
-        batch_size=32,
-        labels="inferred",
-        label_mode="int",  # Integer labels
-        shuffle=True
+    logging.info("Setting up ImageDataGenerator with augmentation...")
+    # Setup ImageDataGenerator for data augmentation
+    train_datagen = ImageDataGenerator(
+        rescale=1.0/255.0,               # Normalize images to [0, 1]
+        rotation_range=30,               # Randomly rotate images
+        width_shift_range=0.2,           # Randomly shift images horizontally
+        height_shift_range=0.2,          # Randomly shift images vertically
+        shear_range=0.2,                 # Randomly shear images
+        zoom_range=0.2,                  # Random zoom
+        horizontal_flip=True,            # Random horizontal flip
+        fill_mode='nearest'              # Fill missing pixels after transformation
     )
-    
-    # Extract class names
-    class_names = dataset.class_names
+    validation_datagen = ImageDataGenerator(rescale=1.0/255.0)
+
+    # Load the dataset using the directory structure where subdirectories are the class labels
+    train_generator = train_datagen.flow_from_directory(
+        TRAIN_DIR,  # Directory with training images
+        target_size=(224, 224), # Resize images to 224x224
+        batch_size=32,         # Use a batch size that fits your memory
+        class_mode='categorical' # 'categorical' for multi-class classification
+    )
+
+    validation_generator = validation_datagen.flow_from_directory(
+        VALIDATION_DIR, # Directory with validation images
+        target_size=(224, 224),    # Resize images to 224x224
+        batch_size=32,
+        class_mode='categorical'   # 'categorical' for multi-class classification
+    )
+
+    # Get number of classes and class names
+    class_indices = train_generator.class_indices
+    class_names = {v: k for k, v in class_indices.items()}  # Reverse the dictionary to get class names
     num_classes = len(class_names)
-    logging.info(f"Found {num_classes} classes: {class_names}")
+    logging.info(f"Found {num_classes} classes: {class_names[:5]}")
 
     # Apply subset limit if provided
     if subset_limit:
-        dataset = dataset.take(subset_limit // 32)
+        steps_per_epoch = subset_limit // 32
+    else:
+        steps_per_epoch = len(train_generator)
 
-    # Split dataset into training and validation
-    train_size = int(0.8 * len(dataset))
-    train_ds = dataset.take(train_size)
-    val_ds = dataset.skip(train_size)
-
-    train_ds = train_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
-    val_ds = val_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
-
-    logging.info("Creating model...")
+    # Create the model
     model = create_model(num_classes)
 
-    callbacks = [EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)]
-    logging.info("Starting model training...")
-    model.fit(train_ds, validation_data=val_ds, epochs=20, callbacks=callbacks)
+    # Define EarlyStopping callback
+    callbacks = [
+        EarlyStopping(
+            monitor='val_loss',  # Monitor validation loss
+            patience=5,          # Wait 5 epochs for improvement before stopping
+            restore_best_weights=True
+        )
+    ]
 
+    # Train the model using the data generator
+    logging.info("Starting model training...")
+    history = model.fit(
+        train_generator,
+        steps_per_epoch=train_generator.samples // train_generator.batch_size,
+        epochs=10,
+        validation_data=validation_generator,
+        validation_steps=validation_generator.samples // validation_generator.batch_size,
+        callbacks=callbacks
+    )
+
+    # Save the model after training
     model.save(model_path)
     logging.info(f"Model saved to {model_path}")
-    return class_names
+
+    return class_names  # Return class names for prediction
