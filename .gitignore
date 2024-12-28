@@ -4,3 +4,4 @@ fingerprints/*
 *.pyc
 validation_data/*
 train_data/*
+download_datasets.sh
