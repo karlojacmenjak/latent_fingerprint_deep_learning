@@ -28,7 +28,7 @@ def create_model():
         layers.Flatten(),
         layers.Dense(512, activation='relu'),
         layers.Dropout(0.5),  # Adding dropout for regularization
-        layers.Dense(200, activation='softmax')  # 200 classes for output
+        layers.Dense(41, activation='softmax')  # 200 classes for output
     ])
     model.compile(
         optimizer=Adam(learning_rate=0.0001),  # Adjust learning rate
@@ -42,7 +42,6 @@ def train_and_save_model(base_dir, model_path, subset_limit=None):
     logging.info("Setting up ImageDataGenerator with augmentation...")
 
     seed = int.from_bytes(os.urandom(4), 'little')
-    print(seed)
     train_dataset, validation_dataset = image_dataset_from_directory(
         directory = TRAIN_DIR,
         labels="inferred",
@@ -55,6 +54,8 @@ def train_and_save_model(base_dir, model_path, subset_limit=None):
         verbose=True,
     )
     
+    label_map = (train_dataset.class_names)
+
     model = create_model()
 
     # Define EarlyStopping callback
@@ -79,3 +80,4 @@ def train_and_save_model(base_dir, model_path, subset_limit=None):
     save_model(model,model_path, overwrite=True)
     logging.info(f"Model saved to {model_path}")
 
+    return label_map
