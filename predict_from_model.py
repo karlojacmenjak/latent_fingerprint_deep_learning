@@ -36,21 +36,34 @@ def predict_multiple(base_dir, model_path, n=5, class_names=None):
 
     for img_path in image_paths:
         identifier = os.path.basename(img_path).split('_')[0]  # Extract ID
-        img =load_img(img_path, target_size=(224,224), color_mode="grayscale")
+        
+        # Load image and preprocess
+        img = load_img(img_path, target_size=(224, 224), color_mode="grayscale")
         img_array = img_to_array(img)
         img_array = expand_dims(img_array, 0)  # Create batch axis
         
+        # Get prediction (output is a probability distribution over the classes)
         predictions = model.predict(img_array)
         score = float(sigmoid(predictions[0][0]))
-        print(f"This image is {100 * (1 - score):.2f}% cat and {100 * score:.2f}% dog.")
         
+        # Get the predicted class index (argmax to get the highest probability)
+        predicted_class_idx = tf.argmax(predictions, axis=-1).numpy()[0]
+
+        # Get the corresponding class label (if class_names is provided)
+        predicted_class = class_names[predicted_class_idx] if class_names else str(predicted_class_idx).zfill(8)
+
+        confidence = np.max(predictions)  # The confidence for the predicted class
+        
+
         result = {
             "image": img_path,
             "identifier": identifier,
-            "score": 1 - score,
+            "predicted_class": predicted_class,
+            "confidence": confidence,
+            "score": score,
         }
         results.append(result)
 
-        #logging.info(f"Image: {img_path}, Identifier: {identifier}, Predicted Class: {result['predicted_class']}, Confidence: {confidence:.2f}")
+        logging.info(f"Image: {img_path}, Identifier: {identifier}, Predicted Class: {predicted_class}, Confidence: {confidence:.2f}")
 
     return results
