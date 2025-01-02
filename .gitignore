@@ -5,3 +5,4 @@ fingerprints/*
 validation_data/*
 train_data/*
 download_datasets.sh
+*.json
