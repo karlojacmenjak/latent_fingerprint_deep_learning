@@ -72,25 +72,6 @@ def parse_and_filter_filenames(
 
     return filtered_files
 
-# Function to split data into train and validation sets
-def split_train_validation(file_list: List[str], validation_split: float = 0.2):
-    """
-    Split file list into train and validation sets ensuring no overlap.
-
-    :param file_list: List of files to split.
-    :param validation_split: Fraction of data to use for validation.
-    :return: Tuple of (train_files, validation_files).
-    """
-    random.shuffle(file_list)
-    split_idx = int(len(file_list) * (1 - validation_split))
-    train_files = file_list[:split_idx]
-    validation_files = file_list[split_idx:]
-
-    # Ensure no overlap between train and validation sets
-    assert not set(train_files) & set(validation_files), "Train and validation sets overlap!"
-
-    return train_files, validation_files
-
 # Function to copy files to specified directories
 def copy_files(file_list: List[str], destination_folder: str):
     """
@@ -117,7 +98,6 @@ def copy_files(file_list: List[str], destination_folder: str):
 def main():
     master_directory = BASE_DIR  # Replace with your dataset path
     train_output_directory = TRAIN_DIR  # Replace with train output directory
-    validation_output_directory = VALIDATION_DIR  # Replace with validation output directory
 
     # Load filters from constants (simulated here, replace with actual imports)
     whitelist_filters = {
@@ -129,16 +109,11 @@ def main():
     # Parse and filter filenames
     filtered_files = parse_and_filter_filenames(master_directory, whitelist_filters, PRIORITY)
 
-    # Split into train and validation sets
-    train_files, validation_files = split_train_validation(filtered_files)
-
     # Print the results
-    print(f"Train files: {len(train_files)}")
-    print(f"Validation files: {len(validation_files)}")
+    print(f"Train files: {len(filtered_files)}")
 
     # Copy files to respective directories
-    copy_files(train_files, train_output_directory)
-    copy_files(validation_files, validation_output_directory)
+    copy_files(filtered_files, train_output_directory)
     print("Creation done")
 
 if __name__ == "__main__":
