@@ -1,3 +1,4 @@
+import json
 import tensorflow as tf
 import numpy as np
 import os
@@ -6,8 +7,15 @@ from keras._tf_keras.keras.saving import load_model
 from keras._tf_keras.keras.utils import load_img, img_to_array
 from keras._tf_keras.keras.ops import expand_dims, sigmoid
 
+from constants import LABEL_PATH
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+def get_labels(label_filename):
+    with open(LABEL_PATH, "r") as f:
+        return json.load(f)
+
 
 def preprocess_image(image_path):
     """Preprocesses a single image for prediction."""
@@ -28,9 +36,11 @@ def get_random_images(base_dir, n=5):
                     image_paths.append(os.path.join(folder_path, img))
     return np.random.choice(image_paths, size=min(n, len(image_paths)), replace=False)
 
-def predict_multiple(base_dir, model_path, n=5, class_names=None):
+def predict_multiple(base_dir, model_path, n=5, label_dir=None):
     """Predicts for multiple random images and logs the results."""
     model = load_model(model_path)
+    class_names = get_labels(label_dir)
+    print(model.metrics_names)
     image_paths = get_random_images(base_dir, n)
     results = []
 

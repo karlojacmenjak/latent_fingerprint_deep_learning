@@ -1,5 +1,5 @@
 import tensorflow as tf
-from constants import BASE_DIR, MODEL_PATH, PREDICT_COUNT, SUBSET_LIMIT
+from constants import BASE_DIR, LABEL_PATH, MODEL_PATH, PREDICT_COUNT, SUBSET_LIMIT
 from train_and_save import train_and_save_model
 from predict_from_model import predict_multiple
 import logging
@@ -20,9 +20,13 @@ if gpus:
 
 if __name__ == "__main__":
     logging.info("Starting training...")
-    classes = train_and_save_model(BASE_DIR, MODEL_PATH, subset_limit=SUBSET_LIMIT)
+    train_and_save_model(BASE_DIR, MODEL_PATH, subset_limit=SUBSET_LIMIT)
 
-    # logging.info("Starting prediction...")
-    # results = predict_multiple(BASE_DIR, MODEL_PATH, n=PREDICT_COUNT, class_names=classes)
-    # for result in results:
-    #     logging.info(f"Summary -> ID: {result['identifier']}, Predicted Class: {result['predicted_class']}, Confidence: {result['confidence']:.2f}")
+    logging.info("Starting prediction...")
+    results = predict_multiple(BASE_DIR, MODEL_PATH, n=PREDICT_COUNT, label_dir=LABEL_PATH)
+    for result in results:
+        output = ""
+        for key, value in result.items():
+            output += key.upper() + ": " + str(value) + "\t"
+        output += "\n"
+        print(output)

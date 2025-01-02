@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 
@@ -11,7 +12,7 @@ from keras._tf_keras.keras.optimizers import Adam
 from keras._tf_keras.keras.saving import save_model
 
 
-from constants import TRAIN_DIR
+from constants import LABEL_PATH, TRAIN_DIR
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -35,6 +36,7 @@ def create_model():
         loss='categorical_crossentropy',  # Loss function for multi-class classification
         metrics=['accuracy']  # Accuracy metric
     )
+
     return model
 
 def train_and_save_model(base_dir, model_path, subset_limit=None):
@@ -53,9 +55,10 @@ def train_and_save_model(base_dir, model_path, subset_limit=None):
         color_mode="grayscale",
         verbose=True,
     )
-    
-    label_map = (train_dataset.class_names)
 
+    labels = (train_dataset.class_names)
+    with open(LABEL_PATH, "w") as f:
+        json.dump(labels, f)
     model = create_model()
 
     # Define EarlyStopping callback
@@ -79,5 +82,3 @@ def train_and_save_model(base_dir, model_path, subset_limit=None):
     # Save the model after training
     save_model(model,model_path, overwrite=True)
     logging.info(f"Model saved to {model_path}")
-
-    return label_map
