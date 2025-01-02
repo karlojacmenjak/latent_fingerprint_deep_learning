@@ -1,6 +1,6 @@
 datasets/*
 fingerprints/*
-*.h5
+*.keras
 *.pyc
 validation_data/*
 train_data/*
