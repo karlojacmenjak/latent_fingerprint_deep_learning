@@ -3,7 +3,7 @@ import random
 from typing import List, Dict
 import shutil
 
-from constants import BASE_DIR, TRAIN_DIR, VALIDATION_DIR
+from constants import BASE_DIR, SUBSET_LIMIT, TRAIN_DIR, VALIDATION_DIR
 
 # Constants to store in constants.py
 HAND_POSITION = ["L"]
@@ -41,6 +41,9 @@ def parse_and_filter_filenames(
         for filename in os.listdir(subject_path):
             if not filename.endswith(".png"):
                 continue
+            
+            if len(filtered_files) >= SUBSET_LIMIT:
+                return filtered_files
 
             parts = filename.split("_")
 
@@ -59,17 +62,17 @@ def parse_and_filter_filenames(
                 else:
                     priority_sum += NEGATIVE_PRIORITY
 
-            max_priority = max(
-                max(priority[key].values()) for key in file_info if key in priority
-            )
+            # max_priority = max(
+            #     max(priority[key].values()) for key in file_info if key in priority
+            # )
 
-            # Check if criteria are satisfied and priority sum is sufficient
-            if (
-                any(file_info[key] in values for key, values in whitelist.items() if key in file_info)
-                and priority_sum >= max_priority
-            ):
-                filtered_files.append(os.path.join(subject_path, filename))
-
+            # # Check if criteria are satisfied and priority sum is sufficient
+            # if (
+            #     any(file_info[key] in values for key, values in whitelist.items() if key in file_info)
+            #     and priority_sum >= max_priority
+            # ):
+            filtered_files.append(os.path.join(subject_path, filename))
+            
     return filtered_files
 
 # Function to copy files to specified directories
