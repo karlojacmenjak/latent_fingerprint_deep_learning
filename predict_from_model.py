@@ -2,13 +2,17 @@ import tensorflow as tf
 import numpy as np
 import os
 import logging
+from keras._tf_keras.keras.saving import load_model
+from keras._tf_keras.keras.utils import load_img, img_to_array
+from keras._tf_keras.keras.ops import expand_dims, sigmoid
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def preprocess_image(image_path):
     """Preprocesses a single image for prediction."""
     img = tf.io.read_file(image_path)
-    img = tf.image.decode_image(img, channels=3)
+    img = tf.image.decode_image(img, channels=1)
     img = tf.image.resize(img, (224, 224))
     img = img / 255.0  # Normalize to [0, 1]
     return img
@@ -26,27 +30,27 @@ def get_random_images(base_dir, n=5):
 
 def predict_multiple(base_dir, model_path, n=5, class_names=None):
     """Predicts for multiple random images and logs the results."""
-    model = tf.keras.models.load_model(model_path)
+    model = load_model(model_path)
     image_paths = get_random_images(base_dir, n)
     results = []
 
     for img_path in image_paths:
         identifier = os.path.basename(img_path).split('_')[0]  # Extract ID
-        img = preprocess_image(img_path)  # Preprocess the image
-        img = tf.expand_dims(img, axis=0)  # Add batch dimension
+        img =load_img(img_path, target_size=(224,224), color_mode="grayscale")
+        img_array = img_to_array(img)
+        img_array = expand_dims(img_array, 0)  # Create batch axis
         
-        prediction = model.predict(img)
-        predicted_class = tf.argmax(prediction, axis=1).numpy()[0]
-        confidence = tf.reduce_max(prediction).numpy()
+        predictions = model.predict(img_array)
+        score = float(sigmoid(predictions[0][0]))
+        print(f"This image is {100 * (1 - score):.2f}% cat and {100 * score:.2f}% dog.")
         
         result = {
             "image": img_path,
             "identifier": identifier,
-            "predicted_class": class_names[predicted_class] if class_names else predicted_class,
-            "confidence": confidence
+            "score": 1 - score,
         }
         results.append(result)
 
-        logging.info(f"Image: {img_path}, Identifier: {identifier}, Predicted Class: {result['predicted_class']}, Confidence: {confidence:.2f}")
+        #logging.info(f"Image: {img_path}, Identifier: {identifier}, Predicted Class: {result['predicted_class']}, Confidence: {confidence:.2f}")
 
     return results
