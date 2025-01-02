@@ -22,7 +22,7 @@ if __name__ == "__main__":
     logging.info("Starting training...")
     classes = train_and_save_model(BASE_DIR, MODEL_PATH, subset_limit=SUBSET_LIMIT)
 
-    logging.info("Starting prediction...")
-    results = predict_multiple(BASE_DIR, MODEL_PATH, n=PREDICT_COUNT, class_names=classes)
-    for result in results:
-        logging.info(f"Summary -> ID: {result['identifier']}, Predicted Class: {result['predicted_class']}, Confidence: {result['confidence']:.2f}")
+    # logging.info("Starting prediction...")
+    # results = predict_multiple(BASE_DIR, MODEL_PATH, n=PREDICT_COUNT, class_names=classes)
+    # for result in results:
+    #     logging.info(f"Summary -> ID: {result['identifier']}, Predicted Class: {result['predicted_class']}, Confidence: {result['confidence']:.2f}")
