@@ -1,4 +1,4 @@
-MODEL_PATH = "fingerprint_model.h5"
+MODEL_PATH = "fingerprint_model.keras"
 BASE_DIR = "./fingerprints/images/latent/png"
 SUBSET_LIMIT = 2000
 PREDICT_COUNT = 5
